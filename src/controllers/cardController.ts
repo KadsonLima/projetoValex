@@ -12,12 +12,37 @@ const createCard = async(req:Request, res:Response) =>{
 
     const employeeId:number = Number(req.params.employeeId)
 
-    await cardService.createCard(employeeId, typeCard, apiKey)
+    const result = await cardService.createCard(employeeId, typeCard, apiKey)
 
+    res.status(201).send(result);
+    
+}
 
-    res.sendStatus(201)
+const activeCard = async(req:Request, res:Response) =>{
+    
+    const CVC:string = req.body.CVC;
+    const password:string = req.body.password;
+    const cardNumber:string = req.body.cardNumber;
+    const cardHolderName:string = req.body.cardHolderName;
+    const expirationDate:string = req.body.expirationDate;
+
+    const result = await cardService.activeCard(CVC, password, cardNumber, cardHolderName, expirationDate)
+
+    res.sendStatus(200)
+    
+}
+
+const getBalance = async(req:Request, res:Response) =>{
+    
+    const cardNumber:string = req.body.cardNumber;
+    const cardHolderName:string = req.body.cardHolderName;
+    const expirationDate:string = req.body.expirationDate;
+
+    const result = await cardService.getBalanceCard(cardNumber, cardHolderName, expirationDate)
+
+    res.status(200).send(result)
     
 }
 
 
-export {createCard}
+export {createCard, activeCard, getBalance}
