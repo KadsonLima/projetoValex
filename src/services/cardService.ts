@@ -60,8 +60,20 @@ async function getBalanceCard(cardNumber:string, cardHolderName:string, expirati
     const recharges = await findRecharge(cardDetails.id);
     const payments = await findPayments(cardDetails.id);
 
-    const balance = recharges.map(recharge => recharge.amount ).reduce((total, recharge) => total + recharge);
-    const payment = payments.map(payment => payment.amount ).reduce((total, payment) => total + payment);
+    let balance:any;
+    let payment:any;
+
+    if(recharges.length == 0){
+        balance = 0;
+    }else{
+        balance = recharges.map(recharge => recharge.amount ).reduce((total, recharge) => total + recharge);
+    }
+
+    if(payments.length ==0){
+        payment = 0;
+    }else{
+        payment = payments.map(payment => payment.amount ).reduce((total, payment) => total + payment);
+    }
 
     const transactionsInfos = {
         balance:balance - payment,

@@ -26,7 +26,7 @@ async function paymentCard(businessId:number, password:string, cardNumber:string
     
     const {balance} = await cardService.getBalanceCard(cardNumber, cardHolderName, expirationDate)
     
-    if(balance < amount) throw {code:406, message:"Insufficient Card balance !!"}
+    if(!balance||balance < amount) throw {code:406, message:"Insufficient Card balance !!"}
 
     const payment = await insert({cardId:cardDetails.id, businessId:businessId, amount:amount})
 
