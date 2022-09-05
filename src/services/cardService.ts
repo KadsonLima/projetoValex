@@ -1,49 +1,17 @@
 import { CardInsertData, findByCardDetails, findByTypeAndEmployeeId, insert, TransactionTypes, update } from "../repositories/cardRepository";
-import { findById } from "../repositories/employeeRepository"
-import { faker }  from '@faker-js/faker/locale/pt_BR';
 import { nameFormatterCard } from "../utils/nameFormatter";
-import { cardCryptCVC, cardCryptPassword, cardGenerator, verifyCardCVC } from "../utils/cardUtils";
-import { findByApiKey } from "../repositories/companyRepository";
-import bcrypt from 'bcrypt';
+import { cardCryptCVC, cardCryptPassword, cardGenerator, verifyCardCVC, verifyCardPassword } from "../utils/cardUtils";
 import { validateDataCard } from "../utils/expirationDate";
 import { findByCardId as findRecharge } from "../repositories/rechargeRepository";
 import { findByCardId as findPayments } from "../repositories/paymentRepository";
+import {validateService} from './validateService';
 
-async function verifyCard(typeCard:TransactionTypes, employeeId:number) {
-
-    const Card = await findByTypeAndEmployeeId(typeCard, employeeId)
-
-    if(Card) throw {code:409, message:"O empregado já tem um Cartão do mesmo tipo"}
-
-    return Card;
-    
-}
-
-async function verifyEmployee(employeeId:number) {
-
-    const User = await findById(employeeId)
-
-    if(!User){throw {code:404, message:'Empregado não encontrado!'}}
-
-    return User;
-    
-}
-
-async function verifyKey(apiKey:string) {
-
-    const Company = await findByApiKey(apiKey)
-
-    if(!Company) throw {code:401, message:"Unauthorized"}
-
-    return Company;
-    
-}
 
 async function createCard(employeeId:number, typeCard:TransactionTypes, apiKey:string) {
       
-    await verifyKey(apiKey);
-    await verifyCard(typeCard, employeeId);
-    const User = await verifyEmployee(employeeId);
+    const Company = await validateService.verifyKey(apiKey);
+    await validateService.verifyTypeCard(typeCard, employeeId);
+    const User = await validateService.verifyEmployee(employeeId, Company);
   
     const {CVC, numberCard, validateCard} = cardGenerator();
     const cardHolderName = nameFormatterCard(User.fullName)
@@ -68,9 +36,9 @@ async function createCard(employeeId:number, typeCard:TransactionTypes, apiKey:s
 
 async function activeCard(CVC:string, password:string, cardNumber:string, cardHolderName:string, expirationDate:string) {
       
-    const cardDetails = await findByCardDetails(cardNumber, cardHolderName, expirationDate);
+    const cardDetails = await validateService.verifyCard(cardNumber, cardHolderName, expirationDate);
 
-    if(!cardDetails || cardDetails.password !== null ) throw {code:405}
+    if(cardDetails.password !== null|| !cardDetails.isBlocked) throw {code:409, message:'Card is already activated'}
 
     validateDataCard(expirationDate);
 
@@ -87,14 +55,10 @@ async function activeCard(CVC:string, password:string, cardNumber:string, cardHo
 
 async function getBalanceCard(cardNumber:string, cardHolderName:string, expirationDate:string) {
 
-    const cardDetails = await findByCardDetails(cardNumber, cardHolderName, expirationDate);
-
-    if(!cardDetails) throw {code:401}
+    const cardDetails = await validateService.verifyCard(cardNumber, cardHolderName, expirationDate);
 
     const recharges = await findRecharge(cardDetails.id);
     const payments = await findPayments(cardDetails.id);
-
-    //console.log("recargas", recharges, "paymesnt", payments)
 
     const balance = recharges.map(recharge => recharge.amount ).reduce((total, recharge) => total + recharge);
     const payment = payments.map(payment => payment.amount ).reduce((total, payment) => total + payment);
@@ -108,5 +72,35 @@ async function getBalanceCard(cardNumber:string, cardHolderName:string, expirati
     return transactionsInfos
 }
 
+async function blockCard(password:string, cardNumber:string, cardHolderName:string, expirationDate:string) {
 
-export const cardService = {createCard, activeCard, getBalanceCard}
+    const cardDetails = await validateService.verifyCard(cardNumber, cardHolderName, expirationDate);
+
+    validateDataCard(expirationDate);
+
+    if(cardDetails.isBlocked){
+        throw {code:409, message:"Card already blocked !!"}
+    }
+    verifyCardPassword(password, cardDetails.password);
+
+    await update(cardDetails.id, {isBlocked:true});
+}
+
+async function unblockCard(password:string, cardNumber:string, cardHolderName:string, expirationDate:string) {
+
+    const cardDetails = await validateService.verifyCard(cardNumber, cardHolderName, expirationDate);
+
+    validateDataCard(expirationDate);
+
+    if(!cardDetails.isBlocked){
+        throw {code:409, message:"Card already unblocked !!"}
+    }
+    verifyCardPassword(password, cardDetails.password);
+
+    await update(cardDetails.id, {isBlocked:false});
+}
+
+
+
+
+export const cardService = {createCard, activeCard, getBalanceCard, blockCard, unblockCard, }

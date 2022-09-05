@@ -29,3 +29,8 @@ export function cardCryptPassword(password:string):string{
 
     return passCrypt
 }
+
+export function verifyCardPassword(password:string, passCrypt:string){
+    const result = bcrypt.compareSync(password, passCrypt)
+    if(!result) throw {code:401, message:'Incorrect Password !'}
+}

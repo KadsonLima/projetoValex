@@ -44,5 +44,30 @@ const getBalance = async(req:Request, res:Response) =>{
     
 }
 
+const blockCard = async(req:Request, res:Response) =>{
+    
+    const password:string = req.body.password;
+    const cardNumber:string = req.body.cardNumber;
+    const cardHolderName:string = req.body.cardHolderName;
+    const expirationDate:string = req.body.expirationDate;
 
-export {createCard, activeCard, getBalance}
+    const result = await cardService.blockCard(password, cardNumber, cardHolderName, expirationDate)
+
+    res.status(200).send(result)
+    
+}
+
+const unblockCard = async(req:Request, res:Response) =>{
+    
+    const password:string = req.body.password;
+    const cardNumber:string = req.body.cardNumber;
+    const cardHolderName:string = req.body.cardHolderName;
+    const expirationDate:string = req.body.expirationDate;
+
+    const result = await cardService.unblockCard(password, cardNumber, cardHolderName, expirationDate)
+
+    res.status(200).send(result)
+    
+}
+
+export {createCard, activeCard, getBalance, blockCard, unblockCard}
